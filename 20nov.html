@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body,html{
+  margin: 0;
+  padding: 0;
+}
+
+svg{
+  position: absolute;
+  top:-37px;
+}
+.links line {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+.nodes circle {
+  /*stroke: #fff;*/
+  /*stroke-width: 1.5px;*/
+}
+
+</style>
+<svg width="1000" height="1000"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="datgui.js"></script>
+<script>
+
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+
+var config = { "tick": true, "linkStrength": 1, "linkDistance": 2, "linkIterations":20, "charge": 2, "gravity": 0.1}
+var gui = new dat.GUI()
+
+var fl = gui.addFolder("Force Layout")
+// fl.open()
+
+var tickChanger = fl.add(config, "tick")
+tickChanger.onChange(function(value) {
+  value ? simulation.start() : simulation.stop()
+})
+
+var linkDistanceChanger = fl.add(config, "linkDistance", 0, 50)
+linkDistanceChanger.onChange(function(value) {
+forceLink.distance(value)
+  simulation.restart()
+  simulation.alpha(1)
+})
+
+var linkStrengthChanger = fl.add(config, "linkStrength", 0, 1)
+linkStrengthChanger.onChange(function(value) {
+forceLink.strength(value)
+  simulation.restart()
+  simulation.alpha(1)
+})
+
+var chargeChanger = fl.add(config,"charge", 0, 5)
+chargeChanger.onChange(function(value) {
+  forceCharge.strength(-value)
+  simulation.restart()
+  simulation.alpha(1)
+})
+
+var gravityChanger = fl.add(config,"gravity", 0, 1)
+gravityChanger.onChange(function(value) {
+forceX.strength(value)
+forceY.strength(value)
+  simulation.restart()
+  simulation.alpha(1)
+})
+
+
+// var simulation = d3.forceSimulation()
+//     .force("link", d3.forceLink().id(function(d) { return d.id; }))
+//     // .force("charge", d3.forceManyBody())
+//     .force("center", d3.forceCenter(width / 2, height / 2));
+var forceX = d3.forceX(width / 2).strength(config['gravity'])
+var forceY = d3.forceY(height / 2).strength(config['gravity'])
+var forceLink = d3.forceLink().id(function(d) { return d.id })
+              .distance(link=> 4+2*Math.sqrt(Math.random(link)*link.distance))
+              .iterations(config["linkIterations"])
+              .strength(config["linkStrength"])
+var forceCharge = d3.forceManyBody().strength(-config["charge"])
+              .theta(0.9)
+              .distanceMin(4)
+
+// var forceCharge2 = d3.forceManyBody().strength(-3)
+//               .theta(0.9)
+//               .distanceMax(10)
+//               .distanceMin(2)
+
+        var simulation = d3.forceSimulation()
+            .force("link", forceLink)
+            // .force("collide",d3.forceCollide( function(d){return d.r + 8 }).iterations(5) )
+            .force("charge", forceCharge)
+            // .force("charge2", forceCharge2)
+            // .force("center", d3.forceCenter(width / 2, height / 2)).strength(1)
+            .force("y", forceY)
+            .force("x", forceX)
+
+
+
+d3.json("20nov.json", function(error, graph) {
+
+  graph.links.forEach(link=>{
+    link.distance = graph.links.filter(d=>d.source==link.source || d.target == link.source || d.source==link.target || d.target == link.target).length;
+  })
+  console.log(graph)
+  if (error) throw error;
+
+
+  var link = svg.append("g")
+      .attr("class", "links")
+    .selectAll("line")
+    .data(graph.links)
+    .enter().append("line")
+      .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+  var node = svg.append("g")
+      .attr("class", "nodes")
+    .selectAll("circle")
+    .data(graph.nodes)
+    .enter().append("circle")
+      .attr("r", 1.3)
+      .attr("fill", function(d) { return color(d.group); })
+      .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+  node.append("title")
+      .text(function(d) { return d.id; });
+
+  simulation
+      .nodes(graph.nodes)
+      .on("tick", ticked);
+
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+
+    simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+  simulation.tick();
+
+  simulation.force("link")
+      .links(graph.links);
+
+  function ticked() {
+    link
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node
+        .attr("cx", function(d) { return d.x = Math.max(0,Math.min(width,d.x)); })
+        .attr("cy", function(d) { return d.y = Math.max(0,Math.min(height,d.y)); });
+  }
+});
+
+function dragstarted(d) {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(d) {
+  d.fx = d3.event.x;
+  d.fy = d3.event.y;
+}
+
+function dragended(d) {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+setTimeout(()=>{
+  forceX.strength(0.3)
+  forceY.strength(0.3)
+    simulation.restart()
+    simulation.alpha(1)
+},20000)
+
+setTimeout(()=>{
+  forceX.strength(0.16)
+  forceY.strength(0.16)
+    simulation.restart()
+    simulation.alpha(1)
+},40000)
+
+setTimeout(()=>{
+  dat.GUI.toggleHide();
+},1000)
+
+</script>
